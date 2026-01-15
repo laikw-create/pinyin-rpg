@@ -1,0 +1,66 @@
+/* 基礎設定 */
+body {
+    font-family: 'Microsoft JhengHei', sans-serif;
+}
+
+.screen {
+    display: none;
+    animation: fadeIn 0.5s;
+}
+
+.screen.active {
+    display: flex;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+/* BOSS 浮動動畫 */
+@keyframes float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-20px); }
+}
+
+.animate-bounce-slow {
+    animation: float 3s ease-in-out infinite;
+}
+
+/* 受傷震動效果 */
+.shake {
+    animation: shake 0.5s cubic-bezier(.36,.07,.19,.97) both;
+}
+
+@keyframes shake {
+    10%, 90% { transform: translate3d(-1px, 0, 0); }
+    20%, 80% { transform: translate3d(2px, 0, 0); }
+    30%, 50%, 70% { transform: translate3d(-4px, 0, 0); }
+    40%, 60% { transform: translate3d(4px, 0, 0); }
+}
+
+/* 傷害數字飄出 */
+.damage-text {
+    position: absolute;
+    color: #ffcc00;
+    font-size: 2rem;
+    font-weight: bold;
+    animation: floatUp 1s ease-out forwards;
+    text-shadow: 2px 2px 0px #000;
+}
+
+@keyframes floatUp {
+    0% { transform: translateY(0) scale(1); opacity: 1; }
+    100% { transform: translateY(-50px) scale(1.5); opacity: 0; }
+}
+
+/* 正確/錯誤按鈕樣式 */
+.btn-correct {
+    background-color: #10b981 !important; /* Green */
+    border-color: #059669 !important;
+}
+
+.btn-wrong {
+    background-color: #ef4444 !important; /* Red */
+    border-color: #b91c1c !important;
+}
