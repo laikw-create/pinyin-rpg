@@ -1,14 +1,26 @@
-// === 1. 初始化與語音載入 ===
-console.log("✅ 遊戲引擎 v2.0 啟動 (強力隱藏拼音版)");
+// === script.js (防呆修正版 v3.0) ===
 
-// 預先載入語音列表 (解決 Chrome 語音延遲載入問題)
-let allVoices = [];
-window.speechSynthesis.onvoiceschanged = () => {
-    allVoices = window.speechSynthesis.getVoices();
-    console.log(`🎤 已載入 ${allVoices.length} 種語音`);
-};
+// 1. 確保 DOM 載入後才執行，避免找不到元素
+document.addEventListener('DOMContentLoaded', () => {
+    console.log("🚀 遊戲引擎載入中...");
+});
 
-// === 2. 遊戲資料庫 (150題) ===
+// 2. 語音合成初始化 (放在全域變數)
+let synth = window.speechSynthesis;
+let voices = [];
+
+// 嘗試載入語音列表
+function loadVoices() {
+    voices = synth.getVoices();
+    console.log(`🎤 偵測到 ${voices.length} 種語音`);
+}
+
+// 監聽語音載入事件 (不同瀏覽器行為不同)
+if (speechSynthesis.onvoiceschanged !== undefined) {
+    speechSynthesis.onvoiceschanged = loadVoices;
+}
+
+// === 3. 遊戲資料庫 ===
 const BOSS_DATA = {
     initials: {
         name: "千舌混亂蛇",
@@ -186,8 +198,8 @@ const BOSS_DATA = {
     }
 };
 
-// === 3. 遊戲核心邏輯 ===
-const game = {
+// === 4. 遊戲核心邏輯 ===
+window.game = { // 將 game 掛在 window 確保 HTML 可以讀取
     state: {
         currentBossKey: null,
         currentIndex: 0,
@@ -203,35 +215,45 @@ const game = {
 
     // 啟動戰鬥
     startBattle: (bossKey) => {
-        // 重要：這時瀏覽器才允許聲音播放，嘗試解鎖語音引擎
-        game.speakWord(""); 
+        try {
+            // 觸發音頻解鎖
+            game.speakWord("ready"); 
 
-        const boss = BOSS_DATA[bossKey];
-        game.state.currentBossKey = bossKey;
-        game.state.currentIndex = 0;
-        game.state.score = 0;
-        game.state.combo = 0;
-        game.state.playerHP = 3;
-        game.state.bossHP = 100;
-        game.state.mistakes = [];
+            const boss = BOSS_DATA[bossKey];
+            game.state.currentBossKey = bossKey;
+            game.state.currentIndex = 0;
+            game.state.score = 0;
+            game.state.combo = 0;
+            game.state.playerHP = 3;
+            game.state.bossHP = 100;
+            game.state.mistakes = [];
 
-        document.querySelectorAll('.screen').forEach(el => el.classList.remove('active'));
-        document.getElementById('battle-screen').classList.add('active');
-        
-        document.getElementById('boss-avatar').innerText = boss.avatar;
-        document.getElementById('boss-name').innerText = boss.name;
-        document.getElementById('boss-hp-bar').style.width = '100%';
-        
-        const tauntEl = document.getElementById('taunt-message');
-        tauntEl.innerText = `"${boss.taunt}"`;
-        tauntEl.classList.remove('hidden');
-        setTimeout(() => tauntEl.classList.add('hidden'), 4000);
+            // 切換畫面
+            document.querySelectorAll('.screen').forEach(el => el.classList.remove('active'));
+            const battleScreen = document.getElementById('battle-screen');
+            if(battleScreen) battleScreen.classList.add('active');
+            
+            // UI 設定
+            document.getElementById('boss-avatar').innerText = boss.avatar;
+            document.getElementById('boss-name').innerText = boss.name;
+            document.getElementById('boss-hp-bar').style.width = '100%';
+            
+            const tauntEl = document.getElementById('taunt-message');
+            if(tauntEl) {
+                tauntEl.innerText = `"${boss.taunt}"`;
+                tauntEl.classList.remove('hidden');
+                setTimeout(() => tauntEl.classList.add('hidden'), 4000);
+            }
 
-        game.updatePlayerHP();
-        game.loadQuestion();
+            game.updatePlayerHP();
+            game.loadQuestion();
+        } catch (e) {
+            console.error("啟動戰鬥失敗:", e);
+            alert("遊戲啟動發生錯誤，請重新整理頁面。");
+        }
     },
 
-    // 載入題目 (核心修正：Regex強力去除括號)
+    // 載入題目
     loadQuestion: () => {
         const boss = BOSS_DATA[game.state.currentBossKey];
         
@@ -243,14 +265,10 @@ const game = {
         const qData = boss.questions[game.state.currentIndex];
         const fullText = qData.q;
 
-        // --- 強力修正：使用 Regex 去除任何形式的括號內容 ---
-        // 這行會把 "媽媽 (mā ma)" 變成 "媽媽"
-        // 也會把 "三個人 (sān)" 變成 "三個人"
-        let displayWord = fullText.replace(/[\(（].*[\)）]/g, "").trim();
-
-        // 如果 Regex 失敗 (例如沒有括號)，就保持原樣
-        if (!displayWord) displayWord = fullText;
-
+        // --- 強力修正：去除拼音 ---
+        // 尋找左括號 ( 或 （ 之前的所有文字
+        let displayWord = fullText.split(/[\(（]/)[0].trim();
+        
         game.state.currentWord = displayWord;
         game.state.currentFullText = fullText;
 
@@ -270,39 +288,35 @@ const game = {
         // 嘗試自動播放
         setTimeout(() => {
             game.speakCurrentWord();
-        }, 300);
+        }, 500);
     },
 
-    // 播放語音功能 (核心修正：強制尋找中文語音)
+    // 播放語音
     speakCurrentWord: () => {
         game.speakWord(game.state.currentWord);
     },
 
     speakWord: (text) => {
-        if (!('speechSynthesis' in window)) return;
+        if (!synth) return;
         
-        window.speechSynthesis.cancel(); // 停止上一句
-
-        if(text === "") return; // 只是用來解鎖引擎
+        synth.cancel(); // 停止上一句
 
         const utterance = new SpeechSynthesisUtterance(text);
         
-        // --- 強力修正：尋找中文語音 ---
-        // 取得所有語音，尋找 lang 包含 'zh' (例如 zh-TW, zh-CN, zh-HK)
-        const voices = window.speechSynthesis.getVoices();
-        const zhVoice = voices.find(v => v.lang.includes('zh'));
+        // 嘗試尋找中文語音
+        if(voices.length === 0) voices = synth.getVoices();
+        
+        const zhVoice = voices.find(v => v.lang.includes('zh') || v.lang.includes('CN') || v.lang.includes('HK') || v.lang.includes('TW'));
         
         if (zhVoice) {
             utterance.voice = zhVoice;
         } else {
-            // 如果找不到特定語音，強制設定語言代碼
             utterance.lang = 'zh-CN'; 
         }
 
         utterance.rate = 0.8; 
-        utterance.pitch = 1;
         
-        window.speechSynthesis.speak(utterance);
+        synth.speak(utterance);
     },
 
     // 檢查答案
@@ -314,8 +328,8 @@ const game = {
         const btnA = document.getElementById('btn-a');
         const btnB = document.getElementById('btn-b');
         
-        btnA.disabled = true;
-        btnB.disabled = true;
+        if(btnA) btnA.disabled = true;
+        if(btnB) btnB.disabled = true;
 
         const feedbackEl = document.getElementById('feedback');
 
@@ -330,10 +344,9 @@ const game = {
             if(game.state.bossHP < 0) game.state.bossHP = 0;
             
             const targetBtn = choice === 'A' ? btnA : btnB;
-            targetBtn.classList.add('btn-correct');
+            if(targetBtn) targetBtn.classList.add('btn-correct');
             game.showDamageEffect(Math.floor(damagePerHit * 10));
             
-            // 顯示正確答案
             feedbackEl.innerHTML = `<span class="text-green-400">✨ 正確！</span><br><span class="text-sm text-gray-300">${game.state.currentFullText}</span>`;
             
         } else {
@@ -342,11 +355,14 @@ const game = {
             game.state.mistakes.push(qData);
             
             const targetBtn = choice === 'A' ? btnA : btnB;
-            targetBtn.classList.add('btn-wrong');
-            document.getElementById('quiz-area').classList.add('shake');
-            setTimeout(() => document.getElementById('quiz-area').classList.remove('shake'), 500);
+            if(targetBtn) targetBtn.classList.add('btn-wrong');
             
-            // 顯示錯誤原因
+            const quizArea = document.getElementById('quiz-area');
+            if(quizArea) {
+                quizArea.classList.add('shake');
+                setTimeout(() => quizArea.classList.remove('shake'), 500);
+            }
+            
             feedbackEl.innerHTML = `<span class="text-red-400">💥 哎呀！${qData.reason}</span><br><span class="text-sm text-gray-300">${game.state.currentFullText}</span>`;
         }
 
@@ -363,13 +379,19 @@ const game = {
     },
 
     updateUI: () => {
-        document.getElementById('boss-hp-bar').style.width = `${game.state.bossHP}%`;
-        document.getElementById('combo-count').innerText = game.state.combo;
+        const hpBar = document.getElementById('boss-hp-bar');
+        if(hpBar) hpBar.style.width = `${game.state.bossHP}%`;
+        
+        const comboEl = document.getElementById('combo-count');
+        if(comboEl) comboEl.innerText = game.state.combo;
+        
         game.updatePlayerHP();
     },
 
     updatePlayerHP: () => {
         const container = document.getElementById('player-hp-container');
+        if(!container) return;
+        
         container.innerHTML = '';
         for(let i=0; i<3; i++) {
             if(i < game.state.playerHP) {
@@ -382,6 +404,8 @@ const game = {
 
     showDamageEffect: (dmg) => {
         const container = document.getElementById('damage-container');
+        if(!container) return;
+
         const el = document.createElement('div');
         el.className = 'damage-text';
         el.innerText = `-${dmg}`;
@@ -403,7 +427,8 @@ const game = {
             title.innerText = "🎉 任務完成！";
             title.className = "text-5xl font-bold mb-4 text-yellow-400";
             game.state.playerLevel++;
-            document.getElementById('player-lvl').innerText = game.state.playerLevel;
+            const lvlEl = document.getElementById('player-lvl');
+            if(lvlEl) lvlEl.innerText = game.state.playerLevel;
         } else {
             title.innerText = "💀 挑戰失敗...";
             title.className = "text-5xl font-bold mb-4 text-gray-500";
