@@ -1,13 +1,32 @@
-// === 1. 測試連線 ===
-console.log("✅ HTML5 遊戲引擎啟動！(150題完整版)");
+// === script.js (防呆修正版 v3.0) ===
 
-// === 2. 遊戲資料庫 (各50題) ===
+// 1. 確保 DOM 載入後才執行，避免找不到元素
+document.addEventListener('DOMContentLoaded', () => {
+    console.log("🚀 遊戲引擎載入中...");
+});
+
+// 2. 語音合成初始化 (放在全域變數)
+let synth = window.speechSynthesis;
+let voices = [];
+
+// 嘗試載入語音列表
+function loadVoices() {
+    voices = synth.getVoices();
+    console.log(`🎤 偵測到 ${voices.length} 種語音`);
+}
+
+// 監聽語音載入事件 (不同瀏覽器行為不同)
+if (speechSynthesis.onvoiceschanged !== undefined) {
+    speechSynthesis.onvoiceschanged = loadVoices;
+}
+
+// === 3. 遊戲資料庫 ===
 const BOSS_DATA = {
     initials: {
         name: "千舌混亂蛇",
         avatar: "🐍",
         color: "text-red-500",
-        taunt: "嘶...這裡有50個陷阱，你的舌頭還能靈活轉動嗎？",
+        taunt: "嘶...聽清楚了，我的毒牙在等待你的失誤！",
         questions: [
             { q: "知道 (zhī dào)", a: "z", b: "zh", correct: "B", reason: "知(zh)是翹舌音！" },
             { q: "三個人 (sān)", a: "s", b: "sh", correct: "A", reason: "三(s)是平舌音！" },
@@ -65,7 +84,7 @@ const BOSS_DATA = {
         name: "鼻音迷霧巨人",
         avatar: "🌫️",
         color: "text-purple-500",
-        taunt: "嗡...前鼻音？後鼻音？我要把你困在『安』與『昂』的迷宮裡！",
+        taunt: "嗡...聽不出來嗎？你將迷失在我的鼻音裡！",
         questions: [
             { q: "朋友 (péng)", a: "en", b: "eng", correct: "B", reason: "朋友很胖(pang)，是後鼻音！" },
             { q: "天空 (tiān)", a: "an", b: "ang", correct: "A", reason: "舌尖頂牙齒，前鼻音 an！" },
@@ -123,7 +142,7 @@ const BOSS_DATA = {
         name: "聲調扭曲魔龍",
         avatar: "🐉",
         color: "text-yellow-500",
-        taunt: "吼！我是掌管四聲的神，你那把破劍，能標對我的聲調嗎？",
+        taunt: "吼！聽得出來是幾聲嗎？聲調可是會騙人的！",
         questions: [
             { q: "媽媽 (mā ma)", a: "一聲", b: "輕聲", correct: "B", reason: "疊字第二字通常輕聲！" },
             { q: "水果 (shuǐ)", a: "ˇ (三聲)", b: "ˋ (四聲)", correct: "A", reason: "水是三聲打勾勾！" },
@@ -179,8 +198,8 @@ const BOSS_DATA = {
     }
 };
 
-// === 3. 遊戲核心邏輯 (App版) ===
-const game = {
+// === 4. 遊戲核心邏輯 ===
+window.game = { // 將 game 掛在 window 確保 HTML 可以讀取
     state: {
         currentBossKey: null,
         currentIndex: 0,
@@ -189,53 +208,72 @@ const game = {
         playerHP: 3,
         bossHP: 100,
         mistakes: [],
-        playerLevel: 1
+        playerLevel: 1,
+        currentWord: "", 
+        currentFullText: "" 
     },
 
     // 啟動戰鬥
     startBattle: (bossKey) => {
-        const boss = BOSS_DATA[bossKey];
-        game.state.currentBossKey = bossKey;
-        game.state.currentIndex = 0;
-        game.state.score = 0;
-        game.state.combo = 0;
-        game.state.playerHP = 3;
-        game.state.bossHP = 100;
-        game.state.mistakes = [];
+        try {
+            // 觸發音頻解鎖
+            game.speakWord("ready"); 
 
-        // UI 初始化
-        document.querySelectorAll('.screen').forEach(el => el.classList.remove('active'));
-        document.getElementById('battle-screen').classList.add('active');
-        
-        // 設定 BOSS 資訊
-        document.getElementById('boss-avatar').innerText = boss.avatar;
-        document.getElementById('boss-name').innerText = boss.name;
-        document.getElementById('boss-hp-bar').style.width = '100%';
-        
-        // 顯示嗆聲
-        const tauntEl = document.getElementById('taunt-message');
-        tauntEl.innerText = `"${boss.taunt}"`;
-        tauntEl.classList.remove('hidden');
-        setTimeout(() => tauntEl.classList.add('hidden'), 4000);
+            const boss = BOSS_DATA[bossKey];
+            game.state.currentBossKey = bossKey;
+            game.state.currentIndex = 0;
+            game.state.score = 0;
+            game.state.combo = 0;
+            game.state.playerHP = 3;
+            game.state.bossHP = 100;
+            game.state.mistakes = [];
 
-        game.updatePlayerHP();
-        game.loadQuestion();
+            // 切換畫面
+            document.querySelectorAll('.screen').forEach(el => el.classList.remove('active'));
+            const battleScreen = document.getElementById('battle-screen');
+            if(battleScreen) battleScreen.classList.add('active');
+            
+            // UI 設定
+            document.getElementById('boss-avatar').innerText = boss.avatar;
+            document.getElementById('boss-name').innerText = boss.name;
+            document.getElementById('boss-hp-bar').style.width = '100%';
+            
+            const tauntEl = document.getElementById('taunt-message');
+            if(tauntEl) {
+                tauntEl.innerText = `"${boss.taunt}"`;
+                tauntEl.classList.remove('hidden');
+                setTimeout(() => tauntEl.classList.add('hidden'), 4000);
+            }
+
+            game.updatePlayerHP();
+            game.loadQuestion();
+        } catch (e) {
+            console.error("啟動戰鬥失敗:", e);
+            alert("遊戲啟動發生錯誤，請重新整理頁面。");
+        }
     },
 
     // 載入題目
     loadQuestion: () => {
         const boss = BOSS_DATA[game.state.currentBossKey];
         
-        // 防止溢出檢查
         if(game.state.currentIndex >= boss.questions.length) {
             game.showResult(true);
             return;
         }
 
         const qData = boss.questions[game.state.currentIndex];
+        const fullText = qData.q;
+
+        // --- 強力修正：去除拼音 ---
+        // 尋找左括號 ( 或 （ 之前的所有文字
+        let displayWord = fullText.split(/[\(（]/)[0].trim();
+        
+        game.state.currentWord = displayWord;
+        game.state.currentFullText = fullText;
 
         document.getElementById('q-index').innerText = game.state.currentIndex + 1;
-        document.getElementById('question-text').innerText = qData.q;
+        document.getElementById('question-text').innerText = displayWord; 
         document.getElementById('btn-a').innerText = qData.a;
         document.getElementById('btn-b').innerText = qData.b;
         document.getElementById('feedback').innerText = "";
@@ -246,6 +284,39 @@ const game = {
             btn.classList.add('bg-blue-600', 'hover:bg-blue-500', 'border-b-4', 'border-blue-800');
             btn.disabled = false;
         });
+
+        // 嘗試自動播放
+        setTimeout(() => {
+            game.speakCurrentWord();
+        }, 500);
+    },
+
+    // 播放語音
+    speakCurrentWord: () => {
+        game.speakWord(game.state.currentWord);
+    },
+
+    speakWord: (text) => {
+        if (!synth) return;
+        
+        synth.cancel(); // 停止上一句
+
+        const utterance = new SpeechSynthesisUtterance(text);
+        
+        // 嘗試尋找中文語音
+        if(voices.length === 0) voices = synth.getVoices();
+        
+        const zhVoice = voices.find(v => v.lang.includes('zh') || v.lang.includes('CN') || v.lang.includes('HK') || v.lang.includes('TW'));
+        
+        if (zhVoice) {
+            utterance.voice = zhVoice;
+        } else {
+            utterance.lang = 'zh-CN'; 
+        }
+
+        utterance.rate = 0.8; 
+        
+        synth.speak(utterance);
     },
 
     // 檢查答案
@@ -257,68 +328,70 @@ const game = {
         const btnA = document.getElementById('btn-a');
         const btnB = document.getElementById('btn-b');
         
-        // 鎖定按鈕
-        btnA.disabled = true;
-        btnB.disabled = true;
+        if(btnA) btnA.disabled = true;
+        if(btnB) btnB.disabled = true;
+
+        const feedbackEl = document.getElementById('feedback');
 
         if (isCorrect) {
-            // 答對
             game.state.combo++;
             game.state.score += 100 + (game.state.combo * 10);
             
-            // 計算 BOSS 扣血量 (題目越多，每題扣越少，讓玩家打久一點)
             let damagePerHit = 100 / boss.questions.length;
-            // 至少扣 2%
             if(damagePerHit < 2) damagePerHit = 2; 
             
             game.state.bossHP -= damagePerHit;
             if(game.state.bossHP < 0) game.state.bossHP = 0;
             
-            // 視覺效果
             const targetBtn = choice === 'A' ? btnA : btnB;
-            targetBtn.classList.add('btn-correct');
-            game.showDamageEffect(Math.floor(damagePerHit * 10)); // 顯示傷害數值
-            document.getElementById('feedback').innerText = "✨ 漂亮的一擊！";
-            document.getElementById('feedback').className = "mt-4 h-6 text-lg font-bold text-green-400";
+            if(targetBtn) targetBtn.classList.add('btn-correct');
+            game.showDamageEffect(Math.floor(damagePerHit * 10));
+            
+            feedbackEl.innerHTML = `<span class="text-green-400">✨ 正確！</span><br><span class="text-sm text-gray-300">${game.state.currentFullText}</span>`;
             
         } else {
-            // 答錯
             game.state.combo = 0;
             game.state.playerHP--;
             game.state.mistakes.push(qData);
             
-            // 視覺效果
             const targetBtn = choice === 'A' ? btnA : btnB;
-            targetBtn.classList.add('btn-wrong');
-            document.getElementById('quiz-area').classList.add('shake');
-            setTimeout(() => document.getElementById('quiz-area').classList.remove('shake'), 500);
+            if(targetBtn) targetBtn.classList.add('btn-wrong');
             
-            document.getElementById('feedback').innerText = `💥 哎呀！${qData.reason}`;
-            document.getElementById('feedback').className = "mt-4 h-6 text-lg font-bold text-red-400";
+            const quizArea = document.getElementById('quiz-area');
+            if(quizArea) {
+                quizArea.classList.add('shake');
+                setTimeout(() => quizArea.classList.remove('shake'), 500);
+            }
+            
+            feedbackEl.innerHTML = `<span class="text-red-400">💥 哎呀！${qData.reason}</span><br><span class="text-sm text-gray-300">${game.state.currentFullText}</span>`;
         }
 
         game.updateUI();
 
-        // 流程判斷
         if (game.state.playerHP <= 0) {
-            setTimeout(() => game.showResult(false), 1500);
+            setTimeout(() => game.showResult(false), 2500);
         } else if (game.state.bossHP <= 0 || game.state.currentIndex >= boss.questions.length - 1) {
-            setTimeout(() => game.showResult(true), 1500);
+            setTimeout(() => game.showResult(true), 2500);
         } else {
             game.state.currentIndex++;
-            setTimeout(game.loadQuestion, 2000); 
+            setTimeout(game.loadQuestion, 2500);
         }
     },
 
-    // 更新介面
     updateUI: () => {
-        document.getElementById('boss-hp-bar').style.width = `${game.state.bossHP}%`;
-        document.getElementById('combo-count').innerText = game.state.combo;
+        const hpBar = document.getElementById('boss-hp-bar');
+        if(hpBar) hpBar.style.width = `${game.state.bossHP}%`;
+        
+        const comboEl = document.getElementById('combo-count');
+        if(comboEl) comboEl.innerText = game.state.combo;
+        
         game.updatePlayerHP();
     },
 
     updatePlayerHP: () => {
         const container = document.getElementById('player-hp-container');
+        if(!container) return;
+        
         container.innerHTML = '';
         for(let i=0; i<3; i++) {
             if(i < game.state.playerHP) {
@@ -329,9 +402,10 @@ const game = {
         }
     },
 
-    // 傷害特效
     showDamageEffect: (dmg) => {
         const container = document.getElementById('damage-container');
+        if(!container) return;
+
         const el = document.createElement('div');
         el.className = 'damage-text';
         el.innerText = `-${dmg}`;
@@ -340,7 +414,6 @@ const game = {
         setTimeout(() => el.remove(), 1000);
     },
 
-    // 結算畫面
     showResult: (isWin) => {
         document.querySelectorAll('.screen').forEach(el => el.classList.remove('active'));
         document.getElementById('result-screen').classList.add('active');
@@ -354,7 +427,8 @@ const game = {
             title.innerText = "🎉 任務完成！";
             title.className = "text-5xl font-bold mb-4 text-yellow-400";
             game.state.playerLevel++;
-            document.getElementById('player-lvl').innerText = game.state.playerLevel;
+            const lvlEl = document.getElementById('player-lvl');
+            if(lvlEl) lvlEl.innerText = game.state.playerLevel;
         } else {
             title.innerText = "💀 挑戰失敗...";
             title.className = "text-5xl font-bold mb-4 text-gray-500";
@@ -379,7 +453,6 @@ const game = {
         }
     },
 
-    // 返回地圖
     returnToMap: () => {
         document.querySelectorAll('.screen').forEach(el => el.classList.remove('active'));
         document.getElementById('world-map').classList.add('active');
