@@ -1,13 +1,14 @@
 // === 1. 測試連線 ===
-console.log("✅ HTML5 遊戲引擎啟動！(150題完整版)");
+console.log("✅ 語音版遊戲引擎啟動！(隱藏拼音 + 自動發聲)");
 
-// === 2. 遊戲資料庫 (各50題) ===
+// === 2. 遊戲資料庫 (150題) ===
+// 注意：資料格式保持不變，程式會自動處理隱藏拼音的邏輯
 const BOSS_DATA = {
     initials: {
         name: "千舌混亂蛇",
         avatar: "🐍",
         color: "text-red-500",
-        taunt: "嘶...這裡有50個陷阱，你的舌頭還能靈活轉動嗎？",
+        taunt: "嘶...聽清楚了，我的毒牙在等待你的失誤！",
         questions: [
             { q: "知道 (zhī dào)", a: "z", b: "zh", correct: "B", reason: "知(zh)是翹舌音！" },
             { q: "三個人 (sān)", a: "s", b: "sh", correct: "A", reason: "三(s)是平舌音！" },
@@ -65,7 +66,7 @@ const BOSS_DATA = {
         name: "鼻音迷霧巨人",
         avatar: "🌫️",
         color: "text-purple-500",
-        taunt: "嗡...前鼻音？後鼻音？我要把你困在『安』與『昂』的迷宮裡！",
+        taunt: "嗡...聽不出來嗎？你將迷失在我的鼻音裡！",
         questions: [
             { q: "朋友 (péng)", a: "en", b: "eng", correct: "B", reason: "朋友很胖(pang)，是後鼻音！" },
             { q: "天空 (tiān)", a: "an", b: "ang", correct: "A", reason: "舌尖頂牙齒，前鼻音 an！" },
@@ -123,7 +124,7 @@ const BOSS_DATA = {
         name: "聲調扭曲魔龍",
         avatar: "🐉",
         color: "text-yellow-500",
-        taunt: "吼！我是掌管四聲的神，你那把破劍，能標對我的聲調嗎？",
+        taunt: "吼！聽得出來是幾聲嗎？聲調可是會騙人的！",
         questions: [
             { q: "媽媽 (mā ma)", a: "一聲", b: "輕聲", correct: "B", reason: "疊字第二字通常輕聲！" },
             { q: "水果 (shuǐ)", a: "ˇ (三聲)", b: "ˋ (四聲)", correct: "A", reason: "水是三聲打勾勾！" },
@@ -179,7 +180,7 @@ const BOSS_DATA = {
     }
 };
 
-// === 3. 遊戲核心邏輯 (App版) ===
+// === 3. 遊戲核心邏輯 (App版 + 語音) ===
 const game = {
     state: {
         currentBossKey: null,
@@ -189,7 +190,9 @@ const game = {
         playerHP: 3,
         bossHP: 100,
         mistakes: [],
-        playerLevel: 1
+        playerLevel: 1,
+        currentWord: "", // 暫存當前題目的文字 (不含拼音)
+        currentFullText: "" // 暫存當前題目的完整文字 (含拼音)
     },
 
     // 啟動戰鬥
@@ -203,16 +206,13 @@ const game = {
         game.state.bossHP = 100;
         game.state.mistakes = [];
 
-        // UI 初始化
         document.querySelectorAll('.screen').forEach(el => el.classList.remove('active'));
         document.getElementById('battle-screen').classList.add('active');
         
-        // 設定 BOSS 資訊
         document.getElementById('boss-avatar').innerText = boss.avatar;
         document.getElementById('boss-name').innerText = boss.name;
         document.getElementById('boss-hp-bar').style.width = '100%';
         
-        // 顯示嗆聲
         const tauntEl = document.getElementById('taunt-message');
         tauntEl.innerText = `"${boss.taunt}"`;
         tauntEl.classList.remove('hidden');
@@ -222,11 +222,10 @@ const game = {
         game.loadQuestion();
     },
 
-    // 載入題目
+    // 載入題目 (核心：解析文字並發音)
     loadQuestion: () => {
         const boss = BOSS_DATA[game.state.currentBossKey];
         
-        // 防止溢出檢查
         if(game.state.currentIndex >= boss.questions.length) {
             game.showResult(true);
             return;
@@ -234,8 +233,24 @@ const game = {
 
         const qData = boss.questions[game.state.currentIndex];
 
+        // --- 核心修改：分離文字與拼音 ---
+        // 資料庫格式為: "知道 (zhī dào)" 或純文字 "knowing"
+        let displayWord = qData.q;
+        
+        // 如果包含 " ("，則切割
+        if (qData.q.includes(' (')) {
+            const parts = qData.q.split(' (');
+            displayWord = parts[0]; // 只取前半部，例如 "知道"
+        } else if (qData.q.includes('(')) { // 處理沒空格的情況
+            const parts = qData.q.split('(');
+            displayWord = parts[0];
+        }
+
+        game.state.currentWord = displayWord;
+        game.state.currentFullText = qData.q; // 保存完整版以便答案揭曉使用
+
         document.getElementById('q-index').innerText = game.state.currentIndex + 1;
-        document.getElementById('question-text').innerText = qData.q;
+        document.getElementById('question-text').innerText = displayWord; // 只顯示文字
         document.getElementById('btn-a').innerText = qData.a;
         document.getElementById('btn-b').innerText = qData.b;
         document.getElementById('feedback').innerText = "";
@@ -246,6 +261,29 @@ const game = {
             btn.classList.add('bg-blue-600', 'hover:bg-blue-500', 'border-b-4', 'border-blue-800');
             btn.disabled = false;
         });
+
+        // --- 自動播放語音 ---
+        // 延遲 500ms 播放，避免切換畫面太快
+        setTimeout(() => {
+            game.speakCurrentWord();
+        }, 500);
+    },
+
+    // 播放語音功能
+    speakCurrentWord: () => {
+        if ('speechSynthesis' in window) {
+            // 取消之前的發音隊列
+            window.speechSynthesis.cancel();
+
+            const utterance = new SpeechSynthesisUtterance(game.state.currentWord);
+            utterance.lang = 'zh-CN'; // 設定為普通話
+            utterance.rate = 0.8; // 稍微慢一點，適合教學
+            utterance.pitch = 1;
+            
+            window.speechSynthesis.speak(utterance);
+        } else {
+            console.log("瀏覽器不支援語音合成");
+        }
     },
 
     // 檢查答案
@@ -257,60 +295,54 @@ const game = {
         const btnA = document.getElementById('btn-a');
         const btnB = document.getElementById('btn-b');
         
-        // 鎖定按鈕
         btnA.disabled = true;
         btnB.disabled = true;
 
+        const feedbackEl = document.getElementById('feedback');
+
         if (isCorrect) {
-            // 答對
             game.state.combo++;
             game.state.score += 100 + (game.state.combo * 10);
             
-            // 計算 BOSS 扣血量 (題目越多，每題扣越少，讓玩家打久一點)
             let damagePerHit = 100 / boss.questions.length;
-            // 至少扣 2%
             if(damagePerHit < 2) damagePerHit = 2; 
             
             game.state.bossHP -= damagePerHit;
             if(game.state.bossHP < 0) game.state.bossHP = 0;
             
-            // 視覺效果
             const targetBtn = choice === 'A' ? btnA : btnB;
             targetBtn.classList.add('btn-correct');
-            game.showDamageEffect(Math.floor(damagePerHit * 10)); // 顯示傷害數值
-            document.getElementById('feedback').innerText = "✨ 漂亮的一擊！";
-            document.getElementById('feedback').className = "mt-4 h-6 text-lg font-bold text-green-400";
+            game.showDamageEffect(Math.floor(damagePerHit * 10));
+            
+            // 顯示正確答案 (含拼音)
+            feedbackEl.innerHTML = `<span class="text-green-400">✨ 正確！</span><br><span class="text-sm text-gray-300">${game.state.currentFullText}</span>`;
             
         } else {
-            // 答錯
             game.state.combo = 0;
             game.state.playerHP--;
             game.state.mistakes.push(qData);
             
-            // 視覺效果
             const targetBtn = choice === 'A' ? btnA : btnB;
             targetBtn.classList.add('btn-wrong');
             document.getElementById('quiz-area').classList.add('shake');
             setTimeout(() => document.getElementById('quiz-area').classList.remove('shake'), 500);
             
-            document.getElementById('feedback').innerText = `💥 哎呀！${qData.reason}`;
-            document.getElementById('feedback').className = "mt-4 h-6 text-lg font-bold text-red-400";
+            // 顯示錯誤原因及拼音
+            feedbackEl.innerHTML = `<span class="text-red-400">💥 哎呀！${qData.reason}</span><br><span class="text-sm text-gray-300">${game.state.currentFullText}</span>`;
         }
 
         game.updateUI();
 
-        // 流程判斷
         if (game.state.playerHP <= 0) {
-            setTimeout(() => game.showResult(false), 1500);
+            setTimeout(() => game.showResult(false), 2500); // 延長時間讓學生看解析
         } else if (game.state.bossHP <= 0 || game.state.currentIndex >= boss.questions.length - 1) {
-            setTimeout(() => game.showResult(true), 1500);
+            setTimeout(() => game.showResult(true), 2500);
         } else {
             game.state.currentIndex++;
-            setTimeout(game.loadQuestion, 2000); 
+            setTimeout(game.loadQuestion, 2500); // 延長時間讓學生看解析
         }
     },
 
-    // 更新介面
     updateUI: () => {
         document.getElementById('boss-hp-bar').style.width = `${game.state.bossHP}%`;
         document.getElementById('combo-count').innerText = game.state.combo;
@@ -329,7 +361,6 @@ const game = {
         }
     },
 
-    // 傷害特效
     showDamageEffect: (dmg) => {
         const container = document.getElementById('damage-container');
         const el = document.createElement('div');
@@ -340,7 +371,6 @@ const game = {
         setTimeout(() => el.remove(), 1000);
     },
 
-    // 結算畫面
     showResult: (isWin) => {
         document.querySelectorAll('.screen').forEach(el => el.classList.remove('active'));
         document.getElementById('result-screen').classList.add('active');
@@ -379,9 +409,6 @@ const game = {
         }
     },
 
-    // 返回地圖
     returnToMap: () => {
         document.querySelectorAll('.screen').forEach(el => el.classList.remove('active'));
-        document.getElementById('world-map').classList.add('active');
-    }
-};
+        document.getElementById

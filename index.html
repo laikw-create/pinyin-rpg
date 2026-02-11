@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>普遊記：聲韻守護者 (HTML5版)</title>
+    <title>普遊記：聲韻守護者 (語音版)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="style.css">
 </head>
@@ -24,19 +24,19 @@
                 <button onclick="game.startBattle('initials')" class="level-card bg-red-900 hover:bg-red-800 border-2 border-red-700">
                     <div class="text-5xl mb-2">🐍</div>
                     <h2 class="text-2xl font-bold">聲母荒原</h2>
-                    <p class="text-sm text-red-200 mt-1">BOSS: 千舌混亂蛇</p>
+                    <p class="text-sm text-red-200 mt-1">聽音辨位 (聲母)</p>
                 </button>
 
                 <button onclick="game.startBattle('finals')" class="level-card bg-purple-900 hover:bg-purple-800 border-2 border-purple-700">
                     <div class="text-5xl mb-2">🌫️</div>
                     <h2 class="text-2xl font-bold">韻母峽谷</h2>
-                    <p class="text-sm text-purple-200 mt-1">BOSS: 鼻音迷霧巨人</p>
+                    <p class="text-sm text-purple-200 mt-1">迷霧聽音 (韻母)</p>
                 </button>
 
                 <button onclick="game.startBattle('tones')" class="level-card bg-yellow-900 hover:bg-yellow-800 border-2 border-yellow-700">
                     <div class="text-5xl mb-2">🐉</div>
                     <h2 class="text-2xl font-bold">拼音天塔</h2>
-                    <p class="text-sm text-yellow-200 mt-1">BOSS: 聲調扭曲魔龍</p>
+                    <p class="text-sm text-yellow-200 mt-1">聲調聽力 (聲調)</p>
                 </button>
             </div>
         </main>
@@ -49,45 +49,44 @@
                 </div>
                 <div class="text-right">
                     <span class="text-xs text-gray-400">生命值 HP</span>
-                    <div id="player-hp-container" class="flex space-x-1">
-                        </div>
+                    <div id="player-hp-container" class="flex space-x-1"></div>
                 </div>
             </div>
 
             <div class="text-center mb-6 relative">
                 <div id="boss-avatar" class="text-7xl animate-bounce-slow mb-2">👾</div>
                 <h3 id="boss-name" class="text-xl font-bold mb-2">魔王</h3>
-                
                 <div class="w-full bg-gray-700 rounded-full h-4 overflow-hidden border border-gray-600">
                     <div id="boss-hp-bar" class="bg-gradient-to-r from-red-500 to-pink-500 h-4 rounded-full transition-all duration-500" style="width: 100%"></div>
                 </div>
-                
-                <div id="taunt-message" class="absolute top-0 right-0 bg-white text-black text-xs p-2 rounded-lg shadow-lg transform translate-x-4 -translate-y-4 w-32 hidden z-10">
-                    放馬過來！
-                </div>
-
+                <div id="taunt-message" class="absolute top-0 right-0 bg-white text-black text-xs p-2 rounded-lg shadow-lg transform translate-x-4 -translate-y-4 w-32 hidden z-10"></div>
                 <div id="damage-container" class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 pointer-events-none"></div>
             </div>
 
             <div id="quiz-area" class="bg-gray-800 p-6 rounded-2xl shadow-xl border border-gray-700 text-center">
                 <div class="text-sm text-gray-400 mb-1">第 <span id="q-index">1</span> 題</div>
-                <h2 id="question-text" class="text-3xl font-bold mb-6 text-white min-h-[3rem] flex items-center justify-center">題目載入中...</h2>
+                
+                <div class="flex flex-col items-center justify-center min-h-[5rem] mb-6">
+                    <h2 id="question-text" class="text-4xl font-bold text-white mb-2">題目</h2>
+                    <button onclick="game.speakCurrentWord()" class="flex items-center gap-2 bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded-full text-sm text-cyan-300 transition">
+                        <span>🔊</span> 點擊重播讀音
+                    </button>
+                </div>
                 
                 <div class="grid grid-cols-2 gap-4">
                     <button id="btn-a" onclick="game.checkAnswer('A')" class="option-btn">A</button>
                     <button id="btn-b" onclick="game.checkAnswer('B')" class="option-btn">B</button>
                 </div>
 
-                <div id="feedback" class="mt-4 h-6 text-lg font-bold"></div>
+                <div id="feedback" class="mt-4 min-h-[3rem] text-lg font-bold flex items-center justify-center flex-col"></div>
             </div>
         </section>
 
         <section id="result-screen" class="screen w-full hidden text-center">
             <h2 id="result-title" class="text-5xl font-bold mb-4">結果</h2>
-            <div id="result-stats" class="text-xl mb-8 text-gray-300 bg-gray-800 p-6 rounded-xl border border-gray-700">
-                </div>
+            <div id="result-stats" class="text-xl mb-8 text-gray-300 bg-gray-800 p-6 rounded-xl border border-gray-700"></div>
             
-            <div id="mistake-list" class="hidden mb-8 text-left bg-red-900/30 p-4 rounded-lg border border-red-900/50">
+            <div id="mistake-list" class="hidden mb-8 text-left bg-red-900/30 p-4 rounded-lg border border-red-900/50 max-h-60 overflow-y-auto">
                 <h3 class="text-red-400 font-bold mb-2">錯題複習：</h3>
                 <ul id="mistake-ul" class="text-sm space-y-2 text-gray-300 list-disc list-inside"></ul>
             </div>
