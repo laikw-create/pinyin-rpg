@@ -1,37 +1,84 @@
-/* 基礎設定 */
+/* HTML5 手機優化設定 */
 body {
-    font-family: 'Microsoft JhengHei', sans-serif;
+    touch-action: manipulation; /* 優化點擊反應速度 */
+    -webkit-tap-highlight-color: transparent; /* 移除手機點擊時的藍色框框 */
+    user-select: none; /* 防止遊戲時不小心選取到文字 */
+    -webkit-user-select: none;
 }
 
+/* 畫面切換邏輯 */
 .screen {
     display: none;
-    animation: fadeIn 0.5s;
+    animation: fadeIn 0.5s ease-in-out;
 }
-
 .screen.active {
-    display: flex;
+    display: block;
 }
 
 @keyframes fadeIn {
-    from { opacity: 0; }
-    to { opacity: 1; }
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* 關卡卡片樣式 */
+.level-card {
+    width: 100%;
+    padding: 1.5rem;
+    border-radius: 1rem;
+    transition: all 0.2s;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+}
+.level-card:active {
+    transform: scale(0.98);
+}
+
+/* 選項按鈕基礎樣式 */
+.option-btn {
+    background-color: #2563eb; /* blue-600 */
+    color: white;
+    font-weight: bold;
+    padding: 1rem;
+    border-radius: 0.5rem;
+    font-size: 1.25rem;
+    transition: all 0.1s;
+    border-bottom: 4px solid #1e40af; /* blue-800 */
+}
+.option-btn:active {
+    transform: translateY(2px);
+    border-bottom-width: 0px;
+}
+.option-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+/* 答對/答錯特效類別 */
+.btn-correct {
+    background-color: #16a34a !important; /* green-600 */
+    border-color: #14532d !important;
+}
+.btn-wrong {
+    background-color: #dc2626 !important; /* red-600 */
+    border-color: #7f1d1d !important;
+    animation: shake 0.4s;
 }
 
 /* BOSS 浮動動畫 */
-@keyframes float {
-    0%, 100% { transform: translateY(0); }
-    50% { transform: translateY(-20px); }
-}
-
 .animate-bounce-slow {
-    animation: float 3s ease-in-out infinite;
+    animation: bounce 3s infinite;
+}
+@keyframes bounce {
+    0%, 100% { transform: translateY(-5%); }
+    50% { transform: translateY(5%); }
 }
 
-/* 受傷震動效果 */
+/* 受傷震動動畫 */
 .shake {
     animation: shake 0.5s cubic-bezier(.36,.07,.19,.97) both;
 }
-
 @keyframes shake {
     10%, 90% { transform: translate3d(-1px, 0, 0); }
     20%, 80% { transform: translate3d(2px, 0, 0); }
@@ -39,28 +86,16 @@ body {
     40%, 60% { transform: translate3d(4px, 0, 0); }
 }
 
-/* 傷害數字飄出 */
+/* 傷害數字飄動動畫 */
 .damage-text {
     position: absolute;
-    color: #ffcc00;
+    color: #ef4444;
+    font-weight: 900;
     font-size: 2rem;
-    font-weight: bold;
-    animation: floatUp 1s ease-out forwards;
     text-shadow: 2px 2px 0px #000;
+    animation: floatUp 0.8s ease-out forwards;
 }
-
 @keyframes floatUp {
     0% { transform: translateY(0) scale(1); opacity: 1; }
     100% { transform: translateY(-50px) scale(1.5); opacity: 0; }
-}
-
-/* 正確/錯誤按鈕樣式 */
-.btn-correct {
-    background-color: #10b981 !important; /* Green */
-    border-color: #059669 !important;
-}
-
-.btn-wrong {
-    background-color: #ef4444 !important; /* Red */
-    border-color: #b91c1c !important;
 }

@@ -2,99 +2,101 @@
 <html lang="zh-HK">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>普遊記：聲韻守護者</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>普遊記：聲韻守護者 (HTML5版)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="style.css">
 </head>
-<body class="bg-gray-900 text-white font-sans select-none overflow-hidden">
+<body class="bg-gray-900 text-white font-sans select-none overflow-x-hidden">
 
-    <div id="world-map" class="screen active h-screen flex flex-col items-center justify-center relative">
-        <h1 class="text-5xl font-bold text-yellow-400 mb-2 drop-shadow-md">⚔️ 普遊記：聲韻守護者</h1>
-        <p class="text-gray-300 mb-10">選擇你的戰場，勇士！ (LV. <span id="player-lvl">1</span>)</p>
-        
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-8 w-full max-w-5xl px-4">
-            <div class="map-card border-4 border-red-800 bg-red-900 hover:scale-105 transition cursor-pointer p-6 rounded-xl flex flex-col items-center" onclick="game.startBattle('initials')">
-                <div class="text-6xl mb-4">🐍</div>
-                <h2 class="text-2xl font-bold">聲母荒原</h2>
-                <p class="text-sm text-red-200 mt-2">BOSS: 千舌混亂蛇</p>
-                <span class="badge bg-red-600 px-2 py-1 rounded text-xs mt-2">翹舌音特訓</span>
+    <div id="app" class="max-w-md mx-auto min-h-screen relative flex flex-col items-center justify-center p-4">
+
+        <main id="world-map" class="screen active w-full text-center">
+            <header class="mb-8">
+                <h1 class="text-4xl font-extrabold text-yellow-400 mb-2 drop-shadow-md">⚔️ 普遊記</h1>
+                <p class="text-xl text-gray-300 tracking-widest">聲韻守護者</p>
+                <div class="mt-4 inline-block bg-gray-800 px-4 py-1 rounded-full text-sm text-gray-400">
+                    勇士等級: LV. <span id="player-lvl">1</span>
+                </div>
+            </header>
+
+            <div class="grid gap-6 w-full">
+                <button onclick="game.startBattle('initials')" class="level-card bg-red-900 hover:bg-red-800 border-2 border-red-700">
+                    <div class="text-5xl mb-2">🐍</div>
+                    <h2 class="text-2xl font-bold">聲母荒原</h2>
+                    <p class="text-sm text-red-200 mt-1">BOSS: 千舌混亂蛇</p>
+                </button>
+
+                <button onclick="game.startBattle('finals')" class="level-card bg-purple-900 hover:bg-purple-800 border-2 border-purple-700">
+                    <div class="text-5xl mb-2">🌫️</div>
+                    <h2 class="text-2xl font-bold">韻母峽谷</h2>
+                    <p class="text-sm text-purple-200 mt-1">BOSS: 鼻音迷霧巨人</p>
+                </button>
+
+                <button onclick="game.startBattle('tones')" class="level-card bg-yellow-900 hover:bg-yellow-800 border-2 border-yellow-700">
+                    <div class="text-5xl mb-2">🐉</div>
+                    <h2 class="text-2xl font-bold">拼音天塔</h2>
+                    <p class="text-sm text-yellow-200 mt-1">BOSS: 聲調扭曲魔龍</p>
+                </button>
+            </div>
+        </main>
+
+        <section id="battle-screen" class="screen w-full hidden relative">
+            <div class="flex justify-between items-center mb-6 bg-gray-800 p-3 rounded-lg border border-gray-700">
+                <div class="text-left">
+                    <span class="text-xs text-gray-400">連擊 Combo</span>
+                    <div class="text-2xl font-bold text-yellow-400" id="combo-count">0</div>
+                </div>
+                <div class="text-right">
+                    <span class="text-xs text-gray-400">生命值 HP</span>
+                    <div id="player-hp-container" class="flex space-x-1">
+                        </div>
+                </div>
             </div>
 
-            <div class="map-card border-4 border-purple-800 bg-purple-900 hover:scale-105 transition cursor-pointer p-6 rounded-xl flex flex-col items-center" onclick="game.startBattle('finals')">
-                <div class="text-6xl mb-4">🌫️</div>
-                <h2 class="text-2xl font-bold">韻母峽谷</h2>
-                <p class="text-sm text-purple-200 mt-2">BOSS: 鼻音迷霧巨人</p>
-                <span class="badge bg-purple-600 px-2 py-1 rounded text-xs mt-2">前後鼻音</span>
-            </div>
-
-            <div class="map-card border-4 border-yellow-600 bg-yellow-800 hover:scale-105 transition cursor-pointer p-6 rounded-xl flex flex-col items-center" onclick="game.startBattle('tones')">
-                <div class="text-6xl mb-4">🐉</div>
-                <h2 class="text-2xl font-bold">拼音天塔</h2>
-                <p class="text-sm text-yellow-200 mt-2">BOSS: 聲調扭曲魔龍</p>
-                <span class="badge bg-yellow-600 px-2 py-1 rounded text-xs mt-2">終極挑戰</span>
-            </div>
-        </div>
-    </div>
-
-    <div id="battle-screen" class="screen hidden h-screen flex flex-col relative">
-        <div class="flex justify-between p-4 bg-black/50">
-            <button onclick="game.returnToMap()" class="text-gray-400 hover:text-white">🏃‍♂️ 逃跑</button>
-            <div class="text-xl font-bold text-yellow-400">連擊: <span id="combo-count">0</span></div>
-        </div>
-
-        <div class="flex-1 flex flex-col items-center justify-center relative">
-            
-            <div class="boss-container text-center mb-8 relative">
-                <div id="boss-avatar" class="text-9xl animate-bounce-slow">🐍</div>
-                <h2 id="boss-name" class="text-2xl font-bold text-red-500 mt-2">千舌混亂蛇</h2>
+            <div class="text-center mb-6 relative">
+                <div id="boss-avatar" class="text-7xl animate-bounce-slow mb-2">👾</div>
+                <h3 id="boss-name" class="text-xl font-bold mb-2">魔王</h3>
                 
-                <div class="w-64 h-4 bg-gray-700 rounded-full mt-2 overflow-hidden border border-gray-500">
-                    <div id="boss-hp-bar" class="h-full bg-red-600 transition-all duration-300" style="width: 100%;"></div>
+                <div class="w-full bg-gray-700 rounded-full h-4 overflow-hidden border border-gray-600">
+                    <div id="boss-hp-bar" class="bg-gradient-to-r from-red-500 to-pink-500 h-4 rounded-full transition-all duration-500" style="width: 100%"></div>
+                </div>
+                
+                <div id="taunt-message" class="absolute top-0 right-0 bg-white text-black text-xs p-2 rounded-lg shadow-lg transform translate-x-4 -translate-y-4 w-32 hidden z-10">
+                    放馬過來！
                 </div>
 
-                <div id="damage-container" class="absolute top-0 left-1/2 -translate-x-1/2 pointer-events-none"></div>
+                <div id="damage-container" class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 pointer-events-none"></div>
             </div>
 
-            <div class="flex items-center gap-2 mb-8">
-                <span>❤️ 勇士生命:</span>
-                <div class="flex gap-1" id="player-hp-container">
-                    </div>
-            </div>
-
-            <div id="quiz-area" class="w-full max-w-2xl bg-gray-800/90 p-6 rounded-xl border-2 border-blue-500 shadow-lg text-center backdrop-blur-sm">
-                
-                <div id="taunt-message" class="hidden mb-4 text-orange-400 italic font-bold text-lg"></div>
-
-                <div class="text-gray-400 text-sm mb-2">第 <span id="q-index">1</span>/10 關</div>
-                <h3 id="question-text" class="text-4xl font-bold mb-6 text-white tracking-wider">題目載入中...</h3>
+            <div id="quiz-area" class="bg-gray-800 p-6 rounded-2xl shadow-xl border border-gray-700 text-center">
+                <div class="text-sm text-gray-400 mb-1">第 <span id="q-index">1</span> 題</div>
+                <h2 id="question-text" class="text-3xl font-bold mb-6 text-white min-h-[3rem] flex items-center justify-center">題目載入中...</h2>
                 
                 <div class="grid grid-cols-2 gap-4">
-                    <button id="btn-a" onclick="game.checkAnswer('A')" class="option-btn bg-blue-600 hover:bg-blue-500 text-white font-bold py-4 rounded-lg text-xl transition transform active:scale-95 border-b-4 border-blue-800">
-                        選項 A
-                    </button>
-                    <button id="btn-b" onclick="game.checkAnswer('B')" class="option-btn bg-blue-600 hover:bg-blue-500 text-white font-bold py-4 rounded-lg text-xl transition transform active:scale-95 border-b-4 border-blue-800">
-                        選項 B
-                    </button>
+                    <button id="btn-a" onclick="game.checkAnswer('A')" class="option-btn">A</button>
+                    <button id="btn-b" onclick="game.checkAnswer('B')" class="option-btn">B</button>
                 </div>
+
                 <div id="feedback" class="mt-4 h-6 text-lg font-bold"></div>
             </div>
-        </div>
-    </div>
+        </section>
 
-    <div id="result-screen" class="screen hidden h-screen flex flex-col items-center justify-center bg-black/90 z-50">
-        <h2 id="result-title" class="text-6xl font-bold mb-4">VICTORY!</h2>
-        <div id="result-stats" class="text-xl text-gray-300 mb-8 text-center">
+        <section id="result-screen" class="screen w-full hidden text-center">
+            <h2 id="result-title" class="text-5xl font-bold mb-4">結果</h2>
+            <div id="result-stats" class="text-xl mb-8 text-gray-300 bg-gray-800 p-6 rounded-xl border border-gray-700">
+                </div>
+            
+            <div id="mistake-list" class="hidden mb-8 text-left bg-red-900/30 p-4 rounded-lg border border-red-900/50">
+                <h3 class="text-red-400 font-bold mb-2">錯題複習：</h3>
+                <ul id="mistake-ul" class="text-sm space-y-2 text-gray-300 list-disc list-inside"></ul>
             </div>
-        
-        <div id="mistake-list" class="hidden w-full max-w-lg bg-gray-800 p-4 rounded mb-6 text-left">
-            <h3 class="text-red-400 font-bold mb-2">🛑 錯題圖鑑 (需複習):</h3>
-            <ul id="mistake-ul" class="list-disc pl-5 text-gray-300 text-sm space-y-1"></ul>
-        </div>
 
-        <button onclick="game.returnToMap()" class="bg-green-600 hover:bg-green-500 text-white font-bold py-3 px-8 rounded-full text-xl shadow-lg animate-pulse">
-            返回地圖
-        </button>
+            <button onclick="game.returnToMap()" class="bg-white text-gray-900 font-bold py-3 px-8 rounded-full text-xl hover:bg-gray-200 transition transform active:scale-95 shadow-lg">
+                返回地圖 🗺️
+            </button>
+        </section>
+
     </div>
 
     <script src="script.js"></script>
