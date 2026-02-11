@@ -1,8 +1,14 @@
-// === 1. 測試連線 ===
-console.log("✅ 語音版遊戲引擎啟動！(隱藏拼音 + 自動發聲)");
+// === 1. 初始化與語音載入 ===
+console.log("✅ 遊戲引擎 v2.0 啟動 (強力隱藏拼音版)");
+
+// 預先載入語音列表 (解決 Chrome 語音延遲載入問題)
+let allVoices = [];
+window.speechSynthesis.onvoiceschanged = () => {
+    allVoices = window.speechSynthesis.getVoices();
+    console.log(`🎤 已載入 ${allVoices.length} 種語音`);
+};
 
 // === 2. 遊戲資料庫 (150題) ===
-// 注意：資料格式保持不變，程式會自動處理隱藏拼音的邏輯
 const BOSS_DATA = {
     initials: {
         name: "千舌混亂蛇",
@@ -180,7 +186,7 @@ const BOSS_DATA = {
     }
 };
 
-// === 3. 遊戲核心邏輯 (App版 + 語音) ===
+// === 3. 遊戲核心邏輯 ===
 const game = {
     state: {
         currentBossKey: null,
@@ -191,12 +197,15 @@ const game = {
         bossHP: 100,
         mistakes: [],
         playerLevel: 1,
-        currentWord: "", // 暫存當前題目的文字 (不含拼音)
-        currentFullText: "" // 暫存當前題目的完整文字 (含拼音)
+        currentWord: "", 
+        currentFullText: "" 
     },
 
     // 啟動戰鬥
     startBattle: (bossKey) => {
+        // 重要：這時瀏覽器才允許聲音播放，嘗試解鎖語音引擎
+        game.speakWord(""); 
+
         const boss = BOSS_DATA[bossKey];
         game.state.currentBossKey = bossKey;
         game.state.currentIndex = 0;
@@ -222,7 +231,7 @@ const game = {
         game.loadQuestion();
     },
 
-    // 載入題目 (核心：解析文字並發音)
+    // 載入題目 (核心修正：Regex強力去除括號)
     loadQuestion: () => {
         const boss = BOSS_DATA[game.state.currentBossKey];
         
@@ -232,25 +241,21 @@ const game = {
         }
 
         const qData = boss.questions[game.state.currentIndex];
+        const fullText = qData.q;
 
-        // --- 核心修改：分離文字與拼音 ---
-        // 資料庫格式為: "知道 (zhī dào)" 或純文字 "knowing"
-        let displayWord = qData.q;
-        
-        // 如果包含 " ("，則切割
-        if (qData.q.includes(' (')) {
-            const parts = qData.q.split(' (');
-            displayWord = parts[0]; // 只取前半部，例如 "知道"
-        } else if (qData.q.includes('(')) { // 處理沒空格的情況
-            const parts = qData.q.split('(');
-            displayWord = parts[0];
-        }
+        // --- 強力修正：使用 Regex 去除任何形式的括號內容 ---
+        // 這行會把 "媽媽 (mā ma)" 變成 "媽媽"
+        // 也會把 "三個人 (sān)" 變成 "三個人"
+        let displayWord = fullText.replace(/[\(（].*[\)）]/g, "").trim();
+
+        // 如果 Regex 失敗 (例如沒有括號)，就保持原樣
+        if (!displayWord) displayWord = fullText;
 
         game.state.currentWord = displayWord;
-        game.state.currentFullText = qData.q; // 保存完整版以便答案揭曉使用
+        game.state.currentFullText = fullText;
 
         document.getElementById('q-index').innerText = game.state.currentIndex + 1;
-        document.getElementById('question-text').innerText = displayWord; // 只顯示文字
+        document.getElementById('question-text').innerText = displayWord; 
         document.getElementById('btn-a').innerText = qData.a;
         document.getElementById('btn-b').innerText = qData.b;
         document.getElementById('feedback').innerText = "";
@@ -262,28 +267,42 @@ const game = {
             btn.disabled = false;
         });
 
-        // --- 自動播放語音 ---
-        // 延遲 500ms 播放，避免切換畫面太快
+        // 嘗試自動播放
         setTimeout(() => {
             game.speakCurrentWord();
-        }, 500);
+        }, 300);
     },
 
-    // 播放語音功能
+    // 播放語音功能 (核心修正：強制尋找中文語音)
     speakCurrentWord: () => {
-        if ('speechSynthesis' in window) {
-            // 取消之前的發音隊列
-            window.speechSynthesis.cancel();
+        game.speakWord(game.state.currentWord);
+    },
 
-            const utterance = new SpeechSynthesisUtterance(game.state.currentWord);
-            utterance.lang = 'zh-CN'; // 設定為普通話
-            utterance.rate = 0.8; // 稍微慢一點，適合教學
-            utterance.pitch = 1;
-            
-            window.speechSynthesis.speak(utterance);
+    speakWord: (text) => {
+        if (!('speechSynthesis' in window)) return;
+        
+        window.speechSynthesis.cancel(); // 停止上一句
+
+        if(text === "") return; // 只是用來解鎖引擎
+
+        const utterance = new SpeechSynthesisUtterance(text);
+        
+        // --- 強力修正：尋找中文語音 ---
+        // 取得所有語音，尋找 lang 包含 'zh' (例如 zh-TW, zh-CN, zh-HK)
+        const voices = window.speechSynthesis.getVoices();
+        const zhVoice = voices.find(v => v.lang.includes('zh'));
+        
+        if (zhVoice) {
+            utterance.voice = zhVoice;
         } else {
-            console.log("瀏覽器不支援語音合成");
+            // 如果找不到特定語音，強制設定語言代碼
+            utterance.lang = 'zh-CN'; 
         }
+
+        utterance.rate = 0.8; 
+        utterance.pitch = 1;
+        
+        window.speechSynthesis.speak(utterance);
     },
 
     // 檢查答案
@@ -314,7 +333,7 @@ const game = {
             targetBtn.classList.add('btn-correct');
             game.showDamageEffect(Math.floor(damagePerHit * 10));
             
-            // 顯示正確答案 (含拼音)
+            // 顯示正確答案
             feedbackEl.innerHTML = `<span class="text-green-400">✨ 正確！</span><br><span class="text-sm text-gray-300">${game.state.currentFullText}</span>`;
             
         } else {
@@ -327,19 +346,19 @@ const game = {
             document.getElementById('quiz-area').classList.add('shake');
             setTimeout(() => document.getElementById('quiz-area').classList.remove('shake'), 500);
             
-            // 顯示錯誤原因及拼音
+            // 顯示錯誤原因
             feedbackEl.innerHTML = `<span class="text-red-400">💥 哎呀！${qData.reason}</span><br><span class="text-sm text-gray-300">${game.state.currentFullText}</span>`;
         }
 
         game.updateUI();
 
         if (game.state.playerHP <= 0) {
-            setTimeout(() => game.showResult(false), 2500); // 延長時間讓學生看解析
+            setTimeout(() => game.showResult(false), 2500);
         } else if (game.state.bossHP <= 0 || game.state.currentIndex >= boss.questions.length - 1) {
             setTimeout(() => game.showResult(true), 2500);
         } else {
             game.state.currentIndex++;
-            setTimeout(game.loadQuestion, 2500); // 延長時間讓學生看解析
+            setTimeout(game.loadQuestion, 2500);
         }
     },
 
@@ -411,4 +430,6 @@ const game = {
 
     returnToMap: () => {
         document.querySelectorAll('.screen').forEach(el => el.classList.remove('active'));
-        document.getElementById
+        document.getElementById('world-map').classList.add('active');
+    }
+};
